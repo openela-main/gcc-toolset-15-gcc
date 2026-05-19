@@ -172,7 +172,7 @@ BuildRequires: gcc-toolset-%{gts_ver}-devel
 Summary: GCC version %{gcc_major}
 Name: %{?scl_prefix}gcc
 Version: %{gcc_version}
-Release: %{gcc_release}%{?dist}
+Release: %{gcc_release}.1%{?dist}
 # License notes for some of the less obvious ones:
 #   gcc/doc/cppinternals.texi: Linux-man-pages-copyleft-2-para
 #   isl: MIT, BSD-2-Clause
@@ -386,6 +386,7 @@ Patch3014: gcc15-dg-ice-fixes.patch
 Patch3015: 0018-Use-CXX11-ABI.patch
 Patch3017: 0020-more-fixes.patch
 Patch3018: 0021-libstdc++-disable-tests.patch
+Patch3019: gcc15-RHEL-150603.patch
 
 %if 0%{?rhel} == 10
 %global nonsharedver 140
@@ -766,6 +767,7 @@ touch -r isl-0.24/m4/ax_prog_cxx_for_build.m4 isl-0.24/m4/ax_prog_cc_for_build.m
 %patch -P3015 -p1 -b .dts-test-15~
 %patch -P3017 -p1 -b .dts-test-17~
 %patch -P3018 -p1 -b .dts-test-18~
+%patch -P3019 -p1 -b .RHEL-150603~
 
 find gcc/testsuite -name \*.pr96939~ | xargs rm -f
 
@@ -2908,6 +2910,9 @@ fi
 %endif
 
 %changelog
+* Thu Mar  5 2026 Siddhesh Poyarekar <siddhesh@redhat.com> 15.2.1-7.1
+- Always inline _M_extract_name (RHEL-150603)
+
 * Mon Jan 26 2026 Siddhesh Poyarekar <siddhesh@redhat.com> 15.2.1-7
 - update from releases/gcc-15 branch (RHEL-116513)
   - PRs ada/68179, ada/123060, ada/123088, ada/123096, ada/123138, ada/123185,
