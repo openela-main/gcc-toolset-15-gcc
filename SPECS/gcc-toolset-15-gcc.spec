@@ -4,6 +4,7 @@
 %global have_scl_utils 0
 %endif
 %global gts_ver 15
+%global gts_next  %(v="%{gts_ver}"; echo $((++v)))
 %{?scl_package:%global scl gcc-toolset-%{gts_ver}}
 %global scl_prefix gcc-toolset-%{gts_ver}-
 %if %have_scl_utils
@@ -15,13 +16,13 @@ BuildRequires: gcc-toolset-%{gts_ver}-devel
 %{?scl:%global __strip %%{_scl_root}/usr/bin/strip}
 %{?scl:%global __objdump %%{_scl_root}/usr/bin/objdump}
 %{?scl:%scl_package gcc}
-%global DATE 20250521
-%global gitrev b9def1721b12cae307c1a1ebc49030fce6531dfa
-%global gcc_version 15.1.1
+%global DATE 20260123
+%global gitrev 226e8310eed1ce10784f98f199e1aa4b12ca86b7
+%global gcc_version 15.2.1
 %global gcc_major 15
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 2
+%global gcc_release 7
 %global nvptx_tools_gitrev 87ce9dc5999e5fca2e1d3478a30888d9864c9804
 %global newlib_cygwin_gitrev d35cc82b5ec15bb8a5fe0fe11e183d1887992e99
 %global isl_version 0.24
@@ -171,7 +172,7 @@ BuildRequires: gcc-toolset-%{gts_ver}-devel
 Summary: GCC version %{gcc_major}
 Name: %{?scl_prefix}gcc
 Version: %{gcc_version}
-Release: %{gcc_release}.4%{?dist}
+Release: %{gcc_release}%{?dist}
 # License notes for some of the less obvious ones:
 #   gcc/doc/cppinternals.texi: Linux-man-pages-copyleft-2-para
 #   isl: MIT, BSD-2-Clause
@@ -251,12 +252,10 @@ BuildRequires: libzstd-devel
 BuildRequires: glibc >= 2.3.90-35
 %endif
 %ifarch %{multilib_64_archs}
-# Ensure glibc{,-devel} is installed for both multilib arches
-%if 0%{?rhel} < 10
-BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
-%else
-BuildRequires: /usr/lib/libc.so /usr/lib64/libc.so
+BuildRequires: (glibc32 or glibc-devel(%{__isa_name}-32))
 %endif
+%ifarch sparcv9 ppc
+BuildRequires: (glibc64 or glibc-devel(%{__isa_name}-64))
 %endif
 %ifarch ia64
 BuildRequires: libunwind >= 0.98
@@ -300,9 +299,7 @@ Requires: libgcc >= 4.1.2-43
 Requires: libgomp >= 4.4.4-13
 # lto-wrapper invokes make
 Requires: make
-%if %have_scl_utils
-%{?scl:Requires:%scl_runtime}
-%endif
+Requires: (%{?scl_prefix}runtime >= %{gts_ver} with %{?scl_prefix}runtime < %{gts_next})
 AutoReq: true
 # Various libraries are imported.  #1859893 asks us to list them all.
 Provides: bundled(libiberty)
@@ -360,6 +357,9 @@ Patch9: gcc15-Wno-format-security.patch
 Patch10: gcc15-rh1574936.patch
 Patch11: gcc15-d-shared-libphobos.patch
 Patch12: gcc15-pr119006.patch
+Patch13: gcc15-pr123273.patch
+Patch14: gcc15-pr123667.patch
+Patch15: gcc15-pr123737.patch
 
 Patch50: isl-rh2155127.patch
 
@@ -723,6 +723,9 @@ so that there cannot be any synchronization problems.
 %patch -P10 -p0 -b .rh1574936~
 %patch -P11 -p0 -b .d-shared-libphobos~
 %patch -P12 -p0 -b .pr119006~
+%patch -P13 -p0 -b .pr123273~
+%patch -P14 -p0 -b .pr123667~
+%patch -P15 -p0 -b .pr123737~
 
 %patch -P100 -p1 -b .fortran-fdec-duplicates~
 
@@ -825,13 +828,6 @@ sed -i '/^GENERATE_TREEVIEW/s/YES/NO/' libstdc++-v3/doc/doxygen/user.cfg.in
 
 # Undo the broken autoconf change in recent Fedora versions
 export CONFIG_SITE=NONE
-
-%if 0%{?rhel} == 10
-# Work around https://issues.redhat.com/browse/RHEL-49348
-%ifarch ppc64le
-export GLIBC_TUNABLES=glibc.cpu.hwcaps=-arch_3_1
-%endif
-%endif
 
 CC=gcc
 CXX=g++
@@ -2912,6 +2908,33 @@ fi
 %endif
 
 %changelog
+* Mon Jan 26 2026 Siddhesh Poyarekar <siddhesh@redhat.com> 15.2.1-7
+- update from releases/gcc-15 branch (RHEL-116513)
+  - PRs ada/68179, ada/123060, ada/123088, ada/123096, ada/123138, ada/123185,
+	ada/123289, ada/123302, ada/123306, ada/123371, ada/123589,
+	analyzer/122975, analyzer/123085, c/123156, c++/91388, c++/114764,
+	c++/116952, c++/120446, c++/121854, c++/121966, c++/122048,
+	c++/122070, c++/122550, c++/122668, c++/122752, c++/122772,
+	c++/122834, c++/122922, c++/123331, c++/123597, debug/121964,
+	diagnostics/120063, fortran/107406, libfortran/122936,
+	libstdc++/120446, libstdc++/122812, libstdc++/122907,
+	libstdc++/123147, middle-end/111817, middle-end/123107,
+	middle-end/123392, middle-end/123703, rtl-optimization/121773,
+	rtl-optimization/122215, rtl-optimization/123121,
+	rtl-optimization/123523, target/117575, target/119130,
+	target/120250, target/121192, target/121485, target/123022,
+	target/123092, target/123155, target/123217, target/123460,
+	target/123484, target/123489, target/123521, target/123607,
+	target/123742, testsuite/123353, tree-optimization/122793,
+	tree-optimization/122868, tree-optimization/123040,
+	tree-optimization/123300, tree-optimization/123351,
+	tree-optimization/123372, tree-optimization/123431,
+	tree-optimization/123513, tree-optimization/123602,
+	tree-optimization/123736, tree-optimization/123741
+
+* Tue Sep  9 2025 Siddhesh Poyarekar <siddhesh@redhat.com> 15.1.1-2.5
+- Fix glibc32 build dependency (RHEL-113182)
+
 * Mon Jun 16 2025 Marek Polacek <polacek@redhat.com> 15.1.1-2.4
 - ship libstdc++.modules.json (RHEL-97095)
 

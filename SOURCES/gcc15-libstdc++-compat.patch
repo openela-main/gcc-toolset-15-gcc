@@ -4813,7 +4813,7 @@
 +asm (".hidden _ZNSt23_Sp_counted_ptr_inplaceINSt6chrono9tzdb_list5_NodeESaIvELN9__gnu_cxx12_Lock_policyE2EED0Ev");
 +asm (".hidden _ZNSt23_Sp_counted_ptr_inplaceINSt6chrono9tzdb_list5_NodeESaIvELN9__gnu_cxx12_Lock_policyE2EE10_M_destroyEv");
 +asm (".hidden _ZNSt23_Sp_counted_ptr_inplaceINSt6chrono9tzdb_list5_NodeESaIvELN9__gnu_cxx12_Lock_policyE2EE14_M_get_deleterERKSt9type_info");
-+asm (".hidden _ZNKSt6chrono14year_month_day19_M_days_since_epochEv");
++//asm (".hidden _ZNKSt6chrono14year_month_day19_M_days_since_epochEv");
 +asm (".hidden _ZNSt6chronossERKNS_14time_zone_linkES2_");
 +asm (".hidden _ZNSt6chrono9time_zoneC2ESt10unique_ptrINS0_5_ImplESt14default_deleteIS2_EE");
 +asm (".hidden _ZNSt6chrono9time_zoneC1ESt10unique_ptrINS0_5_ImplESt14default_deleteIS2_EE");
