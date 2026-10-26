@@ -172,7 +172,7 @@ BuildRequires: gcc-toolset-%{gts_ver}-devel
 Summary: GCC version %{gcc_major}
 Name: %{?scl_prefix}gcc
 Version: %{gcc_version}
-Release: %{gcc_release}%{?dist}
+Release: %{gcc_release}.1%{?dist}
 # License notes for some of the less obvious ones:
 #   gcc/doc/cppinternals.texi: Linux-man-pages-copyleft-2-para
 #   isl: MIT, BSD-2-Clause
@@ -360,6 +360,7 @@ Patch12: gcc15-pr119006.patch
 Patch13: gcc15-pr123273.patch
 Patch14: gcc15-pr123667.patch
 Patch15: gcc15-pr123737.patch
+Patch16: gcc15-pr127656.patch
 
 Patch50: isl-rh2155127.patch
 
@@ -726,6 +727,7 @@ so that there cannot be any synchronization problems.
 %patch -P13 -p0 -b .pr123273~
 %patch -P14 -p0 -b .pr123667~
 %patch -P15 -p0 -b .pr123737~
+%patch -P16 -p1 -b .pr127656~
 
 %patch -P100 -p1 -b .fortran-fdec-duplicates~
 
@@ -2908,6 +2910,9 @@ fi
 %endif
 
 %changelog
+* Thu Oct 15 2026 Jonathan Wakely <jwakely@redhat.com> - 15.2.1-7.1
+- fix CVE-2026-102010, PR libstdc++/127656 (RHEL-272094)
+
 * Mon Jan 26 2026 Siddhesh Poyarekar <siddhesh@redhat.com> 15.2.1-7
 - update from releases/gcc-15 branch (RHEL-116507)
   - PRs ada/68179, ada/123060, ada/123088, ada/123096, ada/123138, ada/123185,
