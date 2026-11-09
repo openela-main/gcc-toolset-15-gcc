@@ -1,0 +1,160 @@
+From a67e31af273205a4ea4acf40a15d687142d1747c Mon Sep 17 00:00:00 2001
+From: Eric Botcazou <ebotcazou@adacore.com>
+Date: Wed, 1 Jul 2026 10:23:46 +0200
+Subject: [PATCH] PTA: Fix wrong optimization of conditional dynamic allocation
+
+This is a regression present on mainline, 16, 15 and 14 branches introduced
+by the fix for PR tree-optimization/112653 (PTA and return).  What happens
+is that DSE incorrectly eliminates a call to memcpy, whose destination is
+obtained from (an equivalent of) malloc and is ultimately returned from the
+function.  But this happens only when the dynamic allocation is conditional.
+
+The difference between the unconditional and conditional cases is:
+
+ESCAPED_RETURN = { ESCAPED NONLOCAL HEAP(30) }
+
+vs
+
+ESCAPED_RETURN = { ANYTHING }
+
+The fix is to apply in set_uids_in_ptset the same treatment to ANYTHING in
+the escaped return case as in the escaped case.
+
+gcc/
+	* tree-ssa-structalias.cc (set_uids_in_ptset): If ANYTHING is
+	present in the ESCAPED_RETURN solution, record that the global
+	solution has an escaped heap if FROM contains a heap variable.
+
+gcc/testsuite/
+	* gnat.dg/opt109.adb: New test.
+	* gnat.dg/opt109_pkg.ads, gnat.dg/opt109_pkg.adb: New helper.
+---
+ gcc/testsuite/gnat.dg/opt109.adb     | 13 +++++++++++
+ gcc/testsuite/gnat.dg/opt109_pkg.adb | 16 ++++++++++++++
+ gcc/testsuite/gnat.dg/opt109_pkg.ads | 33 ++++++++++++++++++++++++++++
+ gcc/tree-ssa-structalias.cc          | 17 +++++++++-----
+ 4 files changed, 73 insertions(+), 6 deletions(-)
+ create mode 100644 gcc/testsuite/gnat.dg/opt109.adb
+ create mode 100644 gcc/testsuite/gnat.dg/opt109_pkg.adb
+ create mode 100644 gcc/testsuite/gnat.dg/opt109_pkg.ads
+
+diff --git a/gcc/testsuite/gnat.dg/opt109.adb b/gcc/testsuite/gnat.dg/opt109.adb
+new file mode 100644
+index 00000000000..caa9e587123
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/opt109.adb
+@@ -0,0 +1,13 @@
++-- { dg-do run }
++-- { dg-options "-O" }
++
++with Opt109_Pkg; use Opt109_Pkg;
++
++procedure Opt109 is
++  S : constant String := "Hello World!";
++  R : constant Rec := F (S);
++begin
++  if R.B.Data.all /= S then
++    raise Program_Error;
++  end if;
++end;
+diff --git a/gcc/testsuite/gnat.dg/opt109_pkg.adb b/gcc/testsuite/gnat.dg/opt109_pkg.adb
+new file mode 100644
+index 00000000000..410a3e41755
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/opt109_pkg.adb
+@@ -0,0 +1,16 @@
++package body Opt109_Pkg is
++
++   function F (Value : String) return Rec is
++   begin
++      if Value'Length > Max then
++         return Result : Rec (Is_Small => False) do
++            Result.B.Data := new String'(Value);
++         end return;
++      else
++         return Result : Rec (Is_Small => True) do
++            Result.S.Data (Value'Length + 1 .. Max) := (others => ' ');
++         end return;
++      end if;
++   end;
++
++end Opt109_Pkg;
+diff --git a/gcc/testsuite/gnat.dg/opt109_pkg.ads b/gcc/testsuite/gnat.dg/opt109_pkg.ads
+new file mode 100644
+index 00000000000..0e483ed40c7
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/opt109_pkg.ads
+@@ -0,0 +1,33 @@
++with System;
++
++package Opt109_Pkg is
++
++   Max : constant Natural := 7;
++   subtype Small_String_Size is Natural range 0 .. Max;
++
++   type Small_String is record
++      Is_Small : Boolean;
++      Length   : Small_String_Size;
++      Data     : aliased String (1 .. Max);
++   end record;
++
++   type Big_String_Access is access all String;
++
++   type Big_String is record
++      Data : Big_String_Access := null;
++   end record;
++
++   for Big_String use record
++      Data at 0 range 0 .. System.Word_Size - 1;
++   end record;
++
++   type Rec (Is_Small : Boolean := True) is record
++      case Is_Small is
++         when True  => S : Small_String;
++         when False => B : Big_String;
++      end case;
++   end record with Unchecked_Union;
++
++   function F (Value : String) return Rec;
++
++end Opt109_Pkg;
+diff --git a/gcc/tree-ssa-structalias.cc b/gcc/tree-ssa-structalias.cc
+index 0215243d5be..f729cf4216a 100644
+--- a/gcc/tree-ssa-structalias.cc
++++ b/gcc/tree-ssa-structalias.cc
+@@ -6782,12 +6782,15 @@ static void
+ set_uids_in_ptset (bitmap into, bitmap from, struct pt_solution *pt,
+ 		   tree fndecl)
+ {
++  const varinfo_t escaped_vi = get_varinfo (find (escaped_id));
++  const varinfo_t escaped_return_vi = get_varinfo (find (escaped_return_id));
++  const bool everything_escaped
++    = escaped_vi->solution && bitmap_bit_p (escaped_vi->solution, anything_id);
++  const bool everything_escaped_return
++    = escaped_return_vi->solution
++      && bitmap_bit_p (escaped_return_vi->solution, anything_id);
+   unsigned int i;
+   bitmap_iterator bi;
+-  varinfo_t escaped_vi = get_varinfo (find (escaped_id));
+-  varinfo_t escaped_return_vi = get_varinfo (find (escaped_return_id));
+-  bool everything_escaped
+-    = escaped_vi->solution && bitmap_bit_p (escaped_vi->solution, anything_id);
+ 
+   EXECUTE_IF_SET_IN_BITMAP (from, 0, i, bi)
+     {
+@@ -6803,8 +6806,10 @@ set_uids_in_ptset (bitmap into, bitmap from, struct pt_solution *pt,
+ 	  pt->vars_contains_escaped = true;
+ 	  pt->vars_contains_escaped_heap |= vi->is_heap_var;
+ 	}
+-      if (escaped_return_vi->solution
+-	  && bitmap_bit_p (escaped_return_vi->solution, i))
++
++      if (everything_escaped_return
++	  || (escaped_return_vi->solution
++	      && bitmap_bit_p (escaped_return_vi->solution, i)))
+ 	pt->vars_contains_escaped_heap |= vi->is_heap_var;
+ 
+       if (vi->is_restrict_var)
+-- 
+2.55.0
+
