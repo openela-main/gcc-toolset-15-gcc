@@ -22,7 +22,7 @@ BuildRequires: gcc-toolset-%{gts_ver}-devel
 %global gcc_major 15
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %%{release}, append them after %%{gcc_release} on Release: line.
-%global gcc_release 7
+%global gcc_release 8
 %global nvptx_tools_gitrev 87ce9dc5999e5fca2e1d3478a30888d9864c9804
 %global newlib_cygwin_gitrev d35cc82b5ec15bb8a5fe0fe11e183d1887992e99
 %global isl_version 0.24
@@ -172,7 +172,7 @@ BuildRequires: gcc-toolset-%{gts_ver}-devel
 Summary: GCC version %{gcc_major}
 Name: %{?scl_prefix}gcc
 Version: %{gcc_version}
-Release: %{gcc_release}.1%{?dist}
+Release: %{gcc_release}%{?dist}
 # License notes for some of the less obvious ones:
 #   gcc/doc/cppinternals.texi: Linux-man-pages-copyleft-2-para
 #   isl: MIT, BSD-2-Clause
@@ -360,7 +360,7 @@ Patch12: gcc15-pr119006.patch
 Patch13: gcc15-pr123273.patch
 Patch14: gcc15-pr123667.patch
 Patch15: gcc15-pr123737.patch
-Patch16: gcc15-pr127656.patch
+Patch16: gcc15-pr112653.patch
 
 Patch50: isl-rh2155127.patch
 
@@ -727,7 +727,7 @@ so that there cannot be any synchronization problems.
 %patch -P13 -p0 -b .pr123273~
 %patch -P14 -p0 -b .pr123667~
 %patch -P15 -p0 -b .pr123737~
-%patch -P16 -p1 -b .pr127656~
+%patch -P16 -p1 -b .pr112653~
 
 %patch -P100 -p1 -b .fortran-fdec-duplicates~
 
@@ -2910,8 +2910,8 @@ fi
 %endif
 
 %changelog
-* Thu Oct 15 2026 Jonathan Wakely <jwakely@redhat.com> - 15.2.1-7.1
-- fix CVE-2026-102010, PR libstdc++/127656 (RHEL-272094)
+* Mon Jul 20 2026 Siddhesh Poyarekar <siddhesh@redhat.com> 15.2.1-8
+- fix wrong optimization of conditional dynamic allocation (RHEL-192425)
 
 * Mon Jan 26 2026 Siddhesh Poyarekar <siddhesh@redhat.com> 15.2.1-7
 - update from releases/gcc-15 branch (RHEL-116507)
